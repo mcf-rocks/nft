@@ -8,8 +8,13 @@ import { useMarkets } from "../../contexts/market";
 import { useUserBalance, useUserTotalBalance } from "../../hooks";
 import { WRAPPED_SOL_MINT } from "../../utils/ids";
 import { formatUSD } from "../../utils/utils";
+import { useConnection } from "../../contexts/connection";
+import { useWallet } from "../../contexts/wallet";
+import { notify } from "../../utils/notifications";
 
 export const HomeView = () => {
+  const connection = useConnection();
+  const { publicKey } = useWallet();
   const { marketEmitter, midPriceInUSD } = useMarkets();
   const { tokenMap } = useConnectionConfig();
   const SRM_ADDRESS = 'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt';
@@ -31,27 +36,57 @@ export const HomeView = () => {
     };
   }, [marketEmitter, midPriceInUSD, tokenMap]);
 
-  return (
-    <Row gutter={[16, 16]} align="middle">
-      <Col span={24}>
-        <h2>Your balances ({formatUSD.format(totalBalanceInUSD)}):</h2>
-        <h2>SOL: {SOL.balance} ({formatUSD.format(SOL.balanceInUSD)})</h2>
-        <h2 style={{ display: 'inline-flex', alignItems: 'center' }}>
-          <TokenIcon mintAddress={SRM_ADDRESS} /> SRM: {SRM?.balance} ({formatUSD.format(SRM?.balanceInUSD)})
-        </h2>
-      </Col>
+  async function newnft() {
+    console.log('Make a new NFT...');
 
-      <Col span={12}>
-        <ConnectButton />
-      </Col>
-      <Col span={12}>
-        <Link to="/faucet">
-          <Button>Faucet</Button>
-        </Link>
-      </Col>
-      <Col span={24}>
-        <div className="builton" />
-      </Col>
-    </Row>
+    if (!publicKey) {
+      console.log('wallet is not connected');
+      notify({
+        message: 'Connect Wallet First',
+        type: 'success',
+      });
+      return;
+    }
+
+    connection.getBalance(publicKey).then((balance) => {
+      console.log('Balance: '+balance);
+      if (balance<9999999) {
+        notify({
+          message: 'You are too poor to make NFTs',
+          type: 'success',
+        });
+        return;
+      } 
+    });
+
+    /*
+    let mint = new Account();
+    console.log('Mint is '+mint.publicKey);
+    sendTransaction(
+      createAndInitializeMint({
+        connection: connection,
+        owner: publicKey,
+        mint,
+        amount: 1,
+        decimals: 0,
+        initialAccount: new Account(),
+      }),
+      { onSuccess: () => refreshWalletPublicKeys(wallet) },
+    );
+   */
+
+  }
+
+  const style = {
+    width: "100%",
+    textAlign: 'center',
+    marginTop: "30px",
+  } as React.CSSProperties;
+
+  return (
+        <div style={style}>
+          <h2>SOL: {SOL.balance}</h2>
+            <Button onClick={newnft}>GENERATE NEW NFT</Button>
+        </div>
   );
 };

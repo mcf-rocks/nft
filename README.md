@@ -11,13 +11,13 @@ cd dapp-scaffold
 
 ```bash
 
-yarn
+npm i
 
 ```
 
 ```bash
 
-yarn start
+npm start
 
 ```
 
@@ -68,3 +68,4 @@ Generic react hooks to interact with token program:
 
 * home - main page for your app
 * faucet - airdrops SOL on Testnet and Devnet
+# nft
