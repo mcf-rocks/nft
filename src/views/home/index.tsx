@@ -11,10 +11,12 @@ import { formatUSD } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
+import { createAndInitializeMint } from "../../utils/token_funcs";
+import { Account } from "@solana/web3.js";
 
 export const HomeView = () => {
   const connection = useConnection();
-  const { publicKey } = useWallet();
+  const { wallet, publicKey } = useWallet();
   const { marketEmitter, midPriceInUSD } = useMarkets();
   const { tokenMap } = useConnectionConfig();
   const SRM_ADDRESS = 'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt';
@@ -59,22 +61,25 @@ export const HomeView = () => {
       } 
     });
 
-    /*
-    let mint = new Account();
-    console.log('Mint is '+mint.publicKey);
-    sendTransaction(
-      createAndInitializeMint({
-        connection: connection,
-        owner: publicKey,
-        mint,
-        amount: 1,
-        decimals: 0,
-        initialAccount: new Account(),
-      }),
-      { onSuccess: () => refreshWalletPublicKeys(wallet) },
-    );
-   */
 
+    let mint = new Account();
+    let owner = publicKey;
+    let amount = 1;
+    let decimals = 0;
+    let initialAccount = new Account(); 
+
+    console.log("Mint: "+mint.publicKey);
+    console.log("TokenAccount: "+initialAccount.publicKey);
+ 
+    createAndInitializeMint({
+      wallet,
+      connection,
+      mint,
+      amount,
+      decimals,
+      initialAccount,
+    });
+ 
   }
 
   const style = {
