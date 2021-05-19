@@ -11,7 +11,8 @@ import { formatUSD } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
-import { createAndInitializeMint } from "../../utils/token_funcs";
+import { findProgramAddress, createAndInitializeMint } from "../../utils/token_funcs";
+import { TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { Account } from "@solana/web3.js";
 
 export const HomeView = () => {
@@ -62,14 +63,16 @@ export const HomeView = () => {
     });
 
 
-    let mint = new Account();
-    let owner = publicKey;
-    let amount = 1;
-    let decimals = 0;
-    let initialAccount = new Account(); 
-
+    const mint = new Account();
     console.log("Mint: "+mint.publicKey);
-    console.log("TokenAccount: "+initialAccount.publicKey);
+
+    const amount = 1;
+    const decimals = 0;
+
+    const pa = await findProgramAddress( [ publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer() ], ATACC_PROGRAM_ID)
+    const taccPK = pa.PK; 
+    const taccSeeds = pa.seeds; 
+    console.log("TokenAccount: "+taccPK.toString());
  
     createAndInitializeMint({
       wallet,
@@ -77,7 +80,6 @@ export const HomeView = () => {
       mint,
       amount,
       decimals,
-      initialAccount,
     });
  
   }
