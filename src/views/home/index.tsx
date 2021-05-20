@@ -39,9 +39,20 @@ export const HomeView = () => {
     };
   }, [marketEmitter, midPriceInUSD, tokenMap]);
 
+  function grind(prefix:String):Account{
+	let pk = "";
+	let ground:Account = new Account();
+	let video:any = document.getElementById("video1");
+	while(pk.slice(0,prefix.length) !== prefix){
+		ground = new Account();
+		pk = ground.publicKey.toBase58(); 
+		if(video.ended){video.play();}
+	}
+	return ground
+  }
+
   async function newnft() {
     console.log('Make a new NFT...');
-
     if (!publicKey) {
       console.log('wallet is not connected');
       notify({
@@ -50,7 +61,8 @@ export const HomeView = () => {
       });
       return;
     }
-
+    
+	playVideo(true);
     connection.getBalance(publicKey).then((balance) => {
       console.log('Balance: '+balance);
       if (balance<9999999) {
@@ -58,12 +70,19 @@ export const HomeView = () => {
           message: 'You are too poor to make NFTs',
           type: 'success',
         });
+        playVideo(false);
         return;
       } 
     });
 
-
-    const mint = new Account();
+	let userVanity = new Account();
+	let vanityPrefix:any = document.getElementById("vanity");
+	if(vanityPrefix && vanityPrefix.value.length > 0){
+		if(window.confirm("This may take a while, do you wish to continue?")){
+			userVanity = grind(vanityPrefix.value);
+		}
+	}
+    const mint = userVanity;
     console.log("Mint: "+mint.publicKey);
 
     const amount = 1;
@@ -80,20 +99,41 @@ export const HomeView = () => {
       mint,
       amount,
       decimals,
-    });
+    })
+    .finally(playVideo);
  
   }
+  
+  function playVideo(play=false){
+	  let video:any = document.getElementById("video1");
+	  if(video && play){ video.play();}
+	  else{video.pause();}
+  }
 
-  const style = {
+  const mainDiv = {
     width: "100%",
     textAlign: 'center',
     marginTop: "30px",
   } as React.CSSProperties;
 
+  const vanityInput ={
+	color:"black",
+	fontSize:"large"
+  }
+
+  const style = {
+	mainDiv,  
+	vanityInput,
+  }
+
   return (
-        <div style={style}>
+        <div style={style.mainDiv}>
           <h2>SOL: {SOL.balance}</h2>
-            <Button onClick={newnft}>GENERATE NEW NFT</Button>
+            VANITY PREFIX:<input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/> <Button onClick={newnft}>GENERATE NEW NFT</Button>
+            <video autoPlay={false} muted={true} loop={true} id="video1">
+			  <source src="./creationEffect.mp4" type="video/mp4"/>
+			</video>
+			Video by Luis Quintero from Pexels
         </div>
   );
 };
