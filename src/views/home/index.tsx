@@ -52,9 +52,13 @@ export const HomeView = () => {
   }
 
   async function newnft() {
-    console.log('Make a new NFT...');
+    console.log('Calling newnft()');
+
     if (!publicKey) {
       console.log('wallet is not connected');
+
+      // TODO: this should be an info message not a success message
+
       notify({
         message: 'Connect Wallet First',
         type: 'success',
@@ -62,9 +66,11 @@ export const HomeView = () => {
       return;
     }
     
-	playVideo(true);
     connection.getBalance(publicKey).then((balance) => {
       console.log('Balance: '+balance);
+
+      // TODO: this should be an error message not a success message
+
       if (balance<9999999) {
         notify({
           message: 'You are too poor to make NFTs',
@@ -75,15 +81,26 @@ export const HomeView = () => {
       } 
     });
 
-	let userVanity = new Account();
 	let vanityPrefix:any = document.getElementById("vanity");
+
 	if(vanityPrefix && vanityPrefix.value.length > 0){
-		if(window.confirm("This may take a while, do you wish to continue?")){
-			userVanity = grind(vanityPrefix.value);
-		}
+      if(window.confirm("This vanity search may take a while, do you wish to continue?")){
+        console.log("Yes to vality search")
+      } else {
+        return
+      }
+    }
+
+	playVideo(true);
+
+	let userVanity = new Account();
+	if(vanityPrefix && vanityPrefix.value.length > 0){
+	  userVanity = grind(vanityPrefix.value);
 	}
+
     const mint = userVanity;
-    console.log("Mint: "+mint.publicKey);
+
+    console.log("Mint will be: "+mint.publicKey);
 
     const amount = 1;
     const decimals = 0;
@@ -91,17 +108,46 @@ export const HomeView = () => {
     const pa = await findProgramAddress( [ publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer() ], ATACC_PROGRAM_ID)
     const taccPK = pa.PK; 
     const taccSeeds = pa.seeds; 
-    console.log("TokenAccount: "+taccPK.toString());
+
+    console.log("TokenAccount will be: "+taccPK.toString());
+
+    // submit the transaction
  
-    createAndInitializeMint({
-      wallet,
-      connection,
-      mint,
-      amount,
-      decimals,
-    })
-    .finally(playVideo);
+    let txid
+    try {
+      txid = await createAndInitializeMint({
+        wallet,
+        connection,
+        mint,
+        amount,
+        decimals,
+      })
+    } catch (error) {
+      playVideo(false)
+      console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+      console.log(error)
+      document.getElementById('status')!.innerHTML = "Transaction rejected: "+error.toString()
+      return
+    } 
+
+    // wait for transaction to be mined
+
+    const tStatus = await connection.confirmTransaction(txid)
+
+    if (tStatus.value.err) {
+      playVideo(false)
+      console.log("FAILED - by node (node ran program but program failed)")
+      console.log(tStatus.value.err)
+      document.getElementById('status')!.innerHTML = "Transaction "+txid+" failed: "+tStatus.value.err
+      return
+    }
+
+    playVideo(false)
  
+    document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot;
+    document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString(); 
+    document.getElementById('mint_meta')!.innerHTML = "The Metadata: "+"0"
+    document.getElementById('tacc')!.innerHTML =  "The Token Account: "+ taccPK.toString(); 
   }
   
   function playVideo(play=false){
@@ -116,7 +162,7 @@ export const HomeView = () => {
     marginTop: "30px",
   } as React.CSSProperties;
 
-  const vanityInput ={
+  const vanityInput = {
 	color:"black",
 	fontSize:"large"
   }
@@ -126,10 +172,42 @@ export const HomeView = () => {
 	vanityInput,
   }
 
+  const inputParent = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: '55px',
+  } as React.CSSProperties;
+
+  const inputChild = {
+    padding: '10px',
+  } as React.CSSProperties;
+
+  const inputChildL = {
+    padding: '10px',
+    paddingTop: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as React.CSSProperties;
+
+  const shim = {
+    paddingTop: '10px',
+  } as React.CSSProperties;
+
   return (
         <div style={style.mainDiv}>
-          <h2>SOL: {SOL.balance}</h2>
-            VANITY PREFIX:<input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/> <Button onClick={newnft}>GENERATE NEW NFT</Button>
+          <p>SOL: {SOL.balance}</p>
+            <div style={inputParent}>
+              <div style={inputChildL}><p>VANITY PREFIX:</p></div>
+              <div style={inputChild}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
+              <div style={inputChild}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
+            </div> 
+            <div style={shim}></div>
+            <p id="status"></p>
+            <p id="mint"></p>
+            <p id="mint_meta"></p>
+            <p id="tacc"></p>
             <video autoPlay={false} muted={true} loop={true} id="video1">
 			  <source src="./creationEffect.mp4" type="video/mp4"/>
 			</video>

@@ -172,8 +172,6 @@ export async function createAndInitializeMint({
     preflightCommitment: 'single',
   });
   
-  console.log("TXID: "+txid);
-
   return txid;
 //  return await connection.sendTransaction(transaction, signers, {
 //    preflightCommitment: 'single',
