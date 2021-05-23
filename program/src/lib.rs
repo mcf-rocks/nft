@@ -16,6 +16,31 @@ fn process_instruction(
         accounts.len(),
         instruction_data
     );
+
+    let account_info_iter = &mut accounts.iter();
+
+    let funder_info = next_account_info(account_info_iter)?;
+    let meta_account_info = next_account_info(account_info_iter)?;
+    let spl_token_mint_info = next_account_info(account_info_iter)?;
+    let system_program_info = next_account_info(account_info_iter)?;
+    let spl_token_program_info = next_account_info(account_info_iter)?;
+    let spl_token_program_id = spl_token_program_info.key;
+    let rent_sysvar_info = next_account_info(account_info_iter)?;
+
+    let (meta_address, bump_seed) = Pubkey::find_program_address(
+        &[
+            [1],
+            &spl_token_program_id.to_bytes(),
+            &spl_token_mint_info.key.to_bytes(),
+        ],
+        program_id,
+    );
+
+    if meta_address != *meta_account_info.key {
+        msg!("Error: Meta address does not match seed derivation");
+        return Err(ProgramError::InvalidSeeds);
+    }
+
     Ok(())
 }
 

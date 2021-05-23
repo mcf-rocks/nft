@@ -2,6 +2,7 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
   Account,
   SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
@@ -28,9 +29,14 @@ import {
   ATACC_PROGRAM_ID,
   WRAPPED_SOL_MINT,
   MEMO_PROGRAM_ID,
+  META_WRITER_PROGRAM_ID,
 } from './program_addresses'
 
 const util = require('util')
+
+export async function createWithSeed( base, seed, programId ) {
+  return PublicKey.createWithSeed(base.publicKey, seed, programId)
+}
 
 export async function findProgramAddress( seeds, programId ) {
   const [ PK, nonce ] = await PublicKey.findProgramAddress( seeds , programId )
@@ -84,16 +90,16 @@ export async function getOwnedTokenAccounts(connection, publicKey) {
     });
 }
 
-export async function createAndInitializeMint({
+export async function createAndInitializeMintWithMeta({
   wallet,
   connection,
-  mint, // Account to hold token information
-  amount, // Number of tokens to issue
+  mint,             // Account to hold token information
+  amount,           // Number of tokens to issue
   decimals,
+  meta,             // metadata
 }) {
   let transaction = new Transaction();
 
-	
   /***************************
    * Create and initialize the mint
    */
@@ -116,6 +122,44 @@ export async function createAndInitializeMint({
       mintAuthority: wallet.publicKey,
     }),
   );
+
+  /************************************************
+   * create and initialize metadata author account
+   */
+
+  if (meta) {
+
+    const authorNumBytes = 33
+    const authorRent = await connection.getMinimumBalanceForRentExemption(authorNumBytes)
+
+    let author_params = {
+
+      fromPubkey: wallet.publicKey,           // payer
+      lamports: authorRent,                   // funds to deposit on the new account
+      space: authorNumBytes,                  // space required in bytes
+
+      basePubkey: mint.publicKey,             // derive from... 
+      seed: 'nft_meta_author',                // derive from...
+      programId: META_WRITER_PROGRAM_ID,      // derive from... and will be owner of account
+
+      newAccountPubkey: meta.author,
+    }
+
+    transaction.add( SystemProgram.createAccountWithSeed( author_params ) )
+
+    const setAuthorInstruction = new TransactionInstruction({
+      keys: [
+               {pubkey: meta.author, isSigner: false, isWritable: true},         
+               {pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false}, 
+               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}    
+            ],
+      programId: META_WRITER_PROGRAM_ID,
+      data: new Uint8Array(),
+    })
+
+    transaction.add( setAuthorInstruction )
+  }
+
 
   /***********************************
    * create and initialize a token account

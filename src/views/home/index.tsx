@@ -11,8 +11,8 @@ import { formatUSD } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
-import { findProgramAddress, createAndInitializeMint } from "../../utils/token_funcs";
-import { TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
+import { findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
+import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { Account } from "@solana/web3.js";
 
 export const HomeView = () => {
@@ -38,6 +38,16 @@ export const HomeView = () => {
       dispose();
     };
   }, [marketEmitter, midPriceInUSD, tokenMap]);
+
+
+  function toBytes(str:string) {
+    const utf8 = unescape(encodeURIComponent(str));
+    let arr = [];
+    for (var i = 0; i < utf8.length; i++) {
+      arr.push(utf8.charCodeAt(i));
+    }
+    return arr
+  }
 
   function grind(prefix:String):Account{
 	let pk = "";
@@ -105,22 +115,47 @@ export const HomeView = () => {
     const amount = 1;
     const decimals = 0;
 
-    const pa = await findProgramAddress( [ publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer() ], ATACC_PROGRAM_ID)
-    const taccPK = pa.PK; 
-    const taccSeeds = pa.seeds; 
+    // hold author pubkey in mint->withSeed account 
+    // only the author will be able to set the metadata
+    // once all the metadata is set, this account will be 
+    // disabled, preventing further changes
+
+    const authorPubkey = await createWithSeed(mint, 'nft_meta_author', META_WRITER_PROGRAM_ID)
+
+    // TEST 
+
+    const metaData = 'mary had a little lamb...'
+
+    const metaBytes = toBytes(metaData)
+
+    console.log("MetaAuthorAccount will be: "+authorPubkey.toString());
+
+    console.log("metaData: "+metaData)
+    console.log("metaBytes: "+metaBytes)
+
+    // the token account address must be mapped so wallets can 'find' the token, this is the mapping...
+
+    const tpa = await findProgramAddress( [ publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer() ], ATACC_PROGRAM_ID)
+    const taccPK = tpa.PK; 
+    const taccSeeds = tpa.seeds; 
 
     console.log("TokenAccount will be: "+taccPK.toString());
 
     // submit the transaction
+
+    let meta:any = {}
+
+    meta.author = authorPubkey
  
     let txid
     try {
-      txid = await createAndInitializeMint({
+      txid = await createAndInitializeMintWithMeta({
         wallet,
         connection,
         mint,
         amount,
         decimals,
+        meta,
       })
     } catch (error) {
       playVideo(false)
@@ -144,10 +179,10 @@ export const HomeView = () => {
 
     playVideo(false)
  
-    document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot;
-    document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString(); 
-    document.getElementById('mint_meta')!.innerHTML = "The Metadata: "+"0"
-    document.getElementById('tacc')!.innerHTML =  "The Token Account: "+ taccPK.toString(); 
+    document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot
+    document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString()
+    document.getElementById('tacc')!.innerHTML =  "The Token Account: "+ taccPK.toString() 
+    document.getElementById('mint_meta_author')!.innerHTML = "The Metadata Author: "+meta.author.toString()
   }
   
   function playVideo(play=false){
@@ -162,13 +197,21 @@ export const HomeView = () => {
     marginTop: "30px",
   } as React.CSSProperties;
 
+  const textInput = {
+	color:"black",
+	fontSize:"large",
+    width:"300px",
+  }
+
   const vanityInput = {
 	color:"black",
-	fontSize:"large"
+	fontSize:"large",
+    width:"60px",
   }
 
   const style = {
 	mainDiv,  
+	textInput,
 	vanityInput,
   }
 
@@ -179,11 +222,11 @@ export const HomeView = () => {
     paddingLeft: '55px',
   } as React.CSSProperties;
 
-  const inputChild = {
+  const inputBoxDiv = {
     padding: '10px',
   } as React.CSSProperties;
 
-  const inputChildL = {
+  const inputDescr = {
     padding: '10px',
     paddingTop: '20px',
     display: 'flex',
@@ -199,15 +242,22 @@ export const HomeView = () => {
         <div style={style.mainDiv}>
           <p>SOL: {SOL.balance}</p>
             <div style={inputParent}>
-              <div style={inputChildL}><p>VANITY PREFIX:</p></div>
-              <div style={inputChild}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
-              <div style={inputChild}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
+              <div style={inputDescr}><p>VANITY PREFIX:</p></div>
+              <div style={inputBoxDiv}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
+            </div> 
+            <div style={inputParent}>
+              <div style={inputDescr}><p>NFT_META_TITLE</p></div>
+              <div style={inputBoxDiv}><input id="nft_meta_title" style={style.textInput} type={"text"} maxLength={100}/></div>
+            </div> 
+            <div style={inputParent}>
+              <div style={inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
+              <div style={inputBoxDiv}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
             </div> 
             <div style={shim}></div>
             <p id="status"></p>
             <p id="mint"></p>
-            <p id="mint_meta"></p>
             <p id="tacc"></p>
+            <p id="mint_meta_author"></p>
             <video autoPlay={false} muted={true} loop={true} id="video1">
 			  <source src="./creationEffect.mp4" type="video/mp4"/>
 			</video>
