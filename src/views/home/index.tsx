@@ -121,17 +121,32 @@ export const HomeView = () => {
     // disabled, preventing further changes
 
     const authorPubkey = await createWithSeed(mint, 'nft_meta_author', META_WRITER_PROGRAM_ID)
-
-    // TEST 
-
-    const metaData = 'mary had a little lamb...'
-
-    const metaBytes = toBytes(metaData)
-
     console.log("MetaAuthorAccount will be: "+authorPubkey.toString());
 
-    console.log("metaData: "+metaData)
-    console.log("metaBytes: "+metaBytes)
+    // meta data - title
+
+    const titlePubkey = await createWithSeed(mint, 'nft_meta_title', META_WRITER_PROGRAM_ID)
+    console.log("MetaTitleAccount will be: "+authorPubkey.toString());
+
+    let title = "without title";
+
+	let titleInput:any = document.getElementById("nft_meta_title");
+
+	if(titleInput && titleInput.value.length > 0) {
+        title = titleInput.value;
+    }
+
+    const titleBytes = toBytes(title)
+
+    console.log("title: "+title)
+    console.log("titleBytes: "+titleBytes)
+    console.log("titleByteCount: "+titleBytes.length)
+
+    if (titleBytes.length > 100) {
+      playVideo(false)
+      console.log("Title is too long: "+titleBytes.length)
+      return
+    }
 
     // the token account address must be mapped so wallets can 'find' the token, this is the mapping...
 
@@ -145,7 +160,10 @@ export const HomeView = () => {
 
     let meta:any = {}
 
-    meta.author = authorPubkey
+    meta.authorPubkey = authorPubkey
+
+    meta.titlePubkey = titlePubkey
+    meta.titleBytes = titleBytes
  
     let txid
     try {
@@ -182,7 +200,8 @@ export const HomeView = () => {
     document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot
     document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString()
     document.getElementById('tacc')!.innerHTML =  "The Token Account: "+ taccPK.toString() 
-    document.getElementById('mint_meta_author')!.innerHTML = "The Metadata Author: "+meta.author.toString()
+    document.getElementById('mint_meta_author')!.innerHTML = "The Metadata Author Account (mint+'nft_meta_author): "+meta.authorPubkey.toString()
+    document.getElementById('mint_meta_title')!.innerHTML = "The Metadata Title Account (mint+'nft_meta_title): "+meta.titlePubkey.toString()
   }
   
   function playVideo(play=false){
@@ -258,6 +277,7 @@ export const HomeView = () => {
             <p id="mint"></p>
             <p id="tacc"></p>
             <p id="mint_meta_author"></p>
+            <p id="mint_meta_title"></p>
             <video autoPlay={false} muted={true} loop={true} id="video1">
 			  <source src="./creationEffect.mp4" type="video/mp4"/>
 			</video>

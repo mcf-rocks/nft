@@ -133,17 +133,24 @@ export async function createAndInitializeMintWithMeta({
 
     const SYSTEM_PROGRAM_ID = SystemProgram.programId;
 
-    let instruction_data = new Uint8Array(1)
-    
+    let instruction_data = new Uint8Array(2)
+   
+    // first byte: 1 = initialization
+ 
     instruction_data[0] = 1;
+
+    // second byte: number of bytes in title (max 100) 
+ 
+    instruction_data[1] = meta.titleBytes.length;
 
     console.log("Invoking contract: "+META_WRITER_PROGRAM_ID);
 
-    const setAuthorInstruction = new TransactionInstruction({
+    const metaInitInstruction = new TransactionInstruction({
       keys: [
                {pubkey: wallet.publicKey, isSigner: true, isWritable: false}, 
                {pubkey: mint.publicKey, isSigner: true, isWritable: false},         
-               {pubkey: meta.author, isSigner: false, isWritable: true},         
+               {pubkey: meta.authorPubkey, isSigner: false, isWritable: true},         
+               {pubkey: meta.titlePubkey, isSigner: false, isWritable: true},         
                {pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false}, 
                {pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
             ],
@@ -151,7 +158,7 @@ export async function createAndInitializeMintWithMeta({
       data: instruction_data,
     })
 
-    transaction.add( setAuthorInstruction )
+    transaction.add( metaInitInstruction )
   }
 
 

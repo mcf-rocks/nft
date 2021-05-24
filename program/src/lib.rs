@@ -10,7 +10,7 @@ use solana_program::{
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
-    program::{invoke, invoke_signed},
+    program::{invoke},
 };
 
 solana_program::declare_id!("MWRTtsXSs2dUDxAbVvREHDVZP8QhK1JE7SGzYbQ7joo");
@@ -36,7 +36,7 @@ fn process_instruction(
     let account_info_iter = &mut accounts.iter();
 
     /***********************************
-     * create author account
+     * initialize accounts
      */
 
     if 1 == instruction_data[0] {
@@ -44,6 +44,7 @@ fn process_instruction(
       let funder_info = next_account_info(account_info_iter)?;
       let mint_info = next_account_info(account_info_iter)?;
       let author_account_info = next_account_info(account_info_iter)?;
+      let title_account_info = next_account_info(account_info_iter)?;
       let rent_sysvar_info = next_account_info(account_info_iter)?;
       let system_program_info = next_account_info(account_info_iter)?;
 
@@ -59,7 +60,7 @@ fn process_instruction(
 
       let rent = &Rent::from_account_info(rent_sysvar_info)?;
 
-      msg!("writing bytes={:?} data={:?}",
+      msg!("Author -- allocating bytes={:?} and writing data={:?}",
           funder_info.key.to_bytes().len(),
           funder_info.key.to_bytes());
 
@@ -85,6 +86,30 @@ fn process_instruction(
       let mut data = author_account_info.try_borrow_mut_data()?;
       data[0] = 1u8;
       data[1..33].clone_from_slice(&funder_info.key.to_bytes());
+
+      let title_bytes = instruction_data[1];
+
+      msg!("Title -- allocating only bytes={:?}", title_bytes);
+
+      msg!("Creating title account");
+      invoke(
+            &system_instruction::create_account_with_seed(
+                funder_info.key,
+                title_account_info.key,
+                mint_info.key,
+                "nft_meta_title",
+                1.max(rent.minimum_balance(title_bytes as usize)),
+                title_bytes as u64,
+                program_id,
+            ),
+            &[
+                funder_info.clone(),
+                title_account_info.clone(),
+                mint_info.clone(),
+                system_program_info.clone(),
+            ],
+      )?;
+
     }
  
     Ok(())
@@ -117,6 +142,17 @@ mod test {
                 }
             };
 
+        let title_account = match Pubkey::create_with_seed(
+                &mint_account.pubkey(),
+                "nft_meta_title",
+                &program_id,
+            ) {
+                Ok(f) => f,
+                Err(e) => { 
+                    panic!("Error: {}", e);
+                }
+            };
+
         let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
             "bpf-program-meta-writer",
             program_id,
@@ -132,6 +168,7 @@ mod test {
                   AccountMeta::new(payer.pubkey(), true),
                   AccountMeta::new(mint_account.pubkey(), true),
                   AccountMeta::new(author_account, false),
+                  AccountMeta::new(title_account, false),
                   AccountMeta::new_readonly(sysvar::rent::id(), false),
                   AccountMeta::new_readonly(solana_program::system_program::id(), false),
                 ],
