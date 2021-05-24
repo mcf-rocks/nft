@@ -1,5 +1,5 @@
 [package]
-name = "bpf-program-template"
+name = "bpf-program-meta-writer"
 version = "0.1.0"
 edition = "2018"
 license = "WTFPL"
@@ -14,7 +14,7 @@ test-bpf = []
 [dev-dependencies]
 assert_matches = "1.4.0"
 solana-program-test = "1.5.0"
-solana-sdk = "1.6.7"
+solana-sdk = "1.6.9"
 solana-validator = "1.6.7"
 
 [lib]

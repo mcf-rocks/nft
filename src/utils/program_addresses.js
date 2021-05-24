@@ -3,7 +3,7 @@ import {
 } from '@solana/web3.js';
 
 export const META_WRITER_PROGRAM_ID = new PublicKey(
-  'HnHar1KmLYj7YmxbXds2Ruwxc3avVv9JpL5KJRuNvs8q',
+  'MWRTtsXSs2dUDxAbVvREHDVZP8QhK1JE7SGzYbQ7joo',
 );
 
 export const TOKEN_PROGRAM_ID = new PublicKey(

@@ -39,7 +39,7 @@ export async function createWithSeed( base, seed, programId ) {
 }
 
 export async function findProgramAddress( seeds, programId ) {
-  const [ PK, nonce ] = await PublicKey.findProgramAddress( seeds , programId )
+  const [ PK, nonce ] = await PublicKey.findProgramAddress( seeds, programId )
   const newSeeds = seeds.concat(Buffer.from([nonce]))
   return { PK, seeds: newSeeds }
 }
@@ -129,32 +129,26 @@ export async function createAndInitializeMintWithMeta({
 
   if (meta) {
 
-    const authorNumBytes = 33
-    const authorRent = await connection.getMinimumBalanceForRentExemption(authorNumBytes)
+    // create and initialize the author meta account
 
-    let author_params = {
+    const SYSTEM_PROGRAM_ID = SystemProgram.programId;
 
-      fromPubkey: wallet.publicKey,           // payer
-      lamports: authorRent,                   // funds to deposit on the new account
-      space: authorNumBytes,                  // space required in bytes
+    let instruction_data = new Uint8Array(1)
+    
+    instruction_data[0] = 1;
 
-      basePubkey: mint.publicKey,             // derive from... 
-      seed: 'nft_meta_author',                // derive from...
-      programId: META_WRITER_PROGRAM_ID,      // derive from... and will be owner of account
-
-      newAccountPubkey: meta.author,
-    }
-
-    transaction.add( SystemProgram.createAccountWithSeed( author_params ) )
+    console.log("Invoking contract: "+META_WRITER_PROGRAM_ID);
 
     const setAuthorInstruction = new TransactionInstruction({
       keys: [
+               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}, 
+               {pubkey: mint.publicKey, isSigner: true, isWritable: false},         
                {pubkey: meta.author, isSigner: false, isWritable: true},         
                {pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false}, 
-               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}    
+               {pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
             ],
       programId: META_WRITER_PROGRAM_ID,
-      data: new Uint8Array(),
+      data: instruction_data,
     })
 
     transaction.add( setAuthorInstruction )
