@@ -100,6 +100,43 @@ export async function getOwnedTokenAccounts(connection, publicKey) {
     });
 }
 
+export async function metaUpdURI({
+  wallet,
+  connection,
+  mint,           
+  meta,    
+}) {
+    let transaction = new Transaction();
+
+    let instruction_data = [3].concat(meta.uriBytes)
+   
+    console.log("Invoking contract for uri update: "+META_WRITER_PROGRAM_ID)
+
+    const metaUpdURIInstruction = new TransactionInstruction({
+      keys: [
+               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}, 
+               {pubkey: mint.publicKey, isSigner: false, isWritable: false},         
+               {pubkey: meta.authorPubkey, isSigner: false, isWritable: false},         
+               {pubkey: meta.uriPubkey, isSigner: false, isWritable: true},         
+            ],
+      programId: META_WRITER_PROGRAM_ID,
+      data: instruction_data,
+    })
+
+    transaction.add( metaUpdURIInstruction )
+
+    const { blockhash, feeCalculator } = await connection.getRecentBlockhash()
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer = wallet.publicKey;
+    let signed = await wallet.signTransaction(transaction);
+
+    let txid =  await connection.sendRawTransaction(signed.serialize(), {
+      preflightCommitment: 'single',
+    });
+  
+    return txid;
+}
+
 export async function metaUpdTitle({
   wallet,
   connection,

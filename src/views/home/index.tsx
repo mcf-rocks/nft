@@ -12,7 +12,7 @@ import { generateSVG } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
-import { metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
+import { metaUpdURI, metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
 import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { Account } from "@solana/web3.js";
 
@@ -127,7 +127,7 @@ export const HomeView = () => {
     // meta data - title - max 100 char UTF-8 plain text describing item
 
     const titlePubkey = await createWithSeed(mint, 'nft_meta_title', META_WRITER_PROGRAM_ID)
-    console.log("MetaTitleAccount will be: "+authorPubkey.toString());
+    console.log("MetaTitleAccount will be: "+titlePubkey.toString());
 
     let title = "without title";
 
@@ -256,9 +256,7 @@ export const HomeView = () => {
       return
     }
 
-    // set title - the reason we do this in separate transaction is because 1232 byte transaction limit
-    // there could be an animated checklist being ticked off for each transaction, or something...
-    // because there will need to be a bunch more for the data upload
+    // set title transaction
 
     try {
       txid = await metaUpdTitle({
@@ -275,6 +273,8 @@ export const HomeView = () => {
       return
     } 
 
+    console.log("Title set tx:"+txid)
+
     // wait for transaction to be mined
 
     tStatus = await connection.confirmTransaction(txid)
@@ -287,6 +287,40 @@ export const HomeView = () => {
       return
     }
 
+    console.log("Title set done")
+
+    // set uri transaction
+
+    try {
+      txid = await metaUpdURI({
+        wallet,
+        connection,
+        mint,
+        meta,
+      })
+    } catch (error) {
+      playVideo(false)
+      console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+      console.log(error)
+      document.getElementById('status')!.innerHTML = "URI update transaction rejected: "+error.toString()
+      return
+    } 
+
+    console.log("URI set tx:"+txid)
+
+    // wait for transaction to be mined
+
+    tStatus = await connection.confirmTransaction(txid)
+
+    if (tStatus.value.err) {
+      playVideo(false)
+      console.log("FAILED - by node (node ran program but program failed)")
+      console.log(tStatus.value.err)
+      document.getElementById('status')!.innerHTML = "URI update transaction "+txid+" failed: "+tStatus.value.err
+      return
+    }
+
+    console.log("URI set done")
 
     // end of transactions
 
