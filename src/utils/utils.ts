@@ -242,3 +242,39 @@ export function convert(
 
   return result;
 }
+
+export function generateSVG(mint="",amount=1){
+	let svgText = `<svg height=600 width=800>
+	      <defs>
+			<linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+			  <stop offset="0%" style="stop-color:purple;stop-opacity:1" />
+			  <stop offset="100%" style="stop-color:blue;stop-opacity:1" />
+			</linearGradient>
+		  </defs>
+       <g>
+         <circle 
+          id="circle" 
+          cx="400" cy="300" 
+          r="130" />
+         <path id="arc" d="M395 170.1
+           A 130 130, 0, 1, 0, 400 170 Z"
+           stroke="black" fill="url(#grad1)"/>
+         <text id="circleText" width="500" fill="red" font-size="2.2vh">
+           <textPath id="circleTextPath" xlink:href="#arc"
+            startOffset="0%">
+              ${mint} - ${amount.toString()}
+             <animate attributeName="startOffset"
+               from="0%" to ="50%"
+               begin="0s" dur="100s"
+               repeatCount="10"/>
+               <animate attributeName="startOffset"
+               from="0%" to ="50%"
+               begin="100s" dur="100s"
+               repeatCount="10"/>
+            </textPath>
+        </g>
+      </svg>
+	`
+	return svgText;
+}
+

@@ -8,6 +8,7 @@ import { useMarkets } from "../../contexts/market";
 import { useUserBalance, useUserTotalBalance } from "../../hooks";
 import { WRAPPED_SOL_MINT } from "../../utils/ids";
 import { formatUSD } from "../../utils/utils";
+import { generateSVG } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
@@ -195,7 +196,8 @@ export const HomeView = () => {
       return
     }
 
-    playVideo(false)
+	showSVG(mint.publicKey.toBase58(),amount);
+	setTimeout(()=>{playVideo(false);},2500);
  
     document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot
     document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString()
@@ -210,10 +212,24 @@ export const HomeView = () => {
 	  else{video.pause();}
   }
 
+  function showSVG(mint:string,amount:number){
+      let svgText = generateSVG(mint,amount);
+      let svgDiv:any = document.getElementById("svgDiv");
+      if(svgDiv){
+		svgDiv.innerHTML = svgText;
+		let svgStyle = "width:0vw;transition:1s linear;overflow:hidden;display:block;margin:auto;position:absolute;top:30vh;left:30vw;"
+		svgDiv.setAttribute("style",svgStyle);
+		setTimeout(()=>{
+			svgDiv.setAttribute("style",svgStyle.replace("0vw","33vw"));
+		},1000)
+	  }
+  }
+  
   const mainDiv = {
     width: "100%",
     textAlign: 'center',
     marginTop: "30px",
+    overflowX:"hidden",
   } as React.CSSProperties;
 
   const textInput = {
@@ -259,6 +275,7 @@ export const HomeView = () => {
 
   return (
         <div style={style.mainDiv}>
+          <div id="svgDiv"></div>
           <p>SOL: {SOL.balance}</p>
             <div style={inputParent}>
               <div style={inputDescr}><p>VANITY PREFIX:</p></div>
