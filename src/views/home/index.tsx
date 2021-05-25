@@ -157,7 +157,7 @@ export const HomeView = () => {
     const uriPubkey = await createWithSeed(mint, 'nft_meta_uri', META_WRITER_PROGRAM_ID)
     console.log("MetaURIAccount will be: "+uriPubkey.toString());
 
-    let uri = "without uri";
+    let uri = "";
 
 	let uriInput:any = document.getElementById("nft_meta_uri");
 
@@ -174,6 +174,31 @@ export const HomeView = () => {
     if (uriBytes.length > 255) {
       playVideo(false)
       console.log("URI is too long: "+uriBytes.length)
+      return
+    }
+
+    // meta data - the data itself
+
+    const dataPubkey = await createWithSeed(mint, 'nft_meta_data', META_WRITER_PROGRAM_ID)
+    console.log("MetaDataAccount will be: "+dataPubkey.toString());
+
+    let data = "";
+
+	let dataInput:any = document.getElementById("nft_meta_data");
+
+	if(dataInput && dataInput.value.length > 0) {
+        data = dataInput.value;
+    }
+
+    const dataBytes = toBytes(data)
+
+    console.log("data: "+data)
+    console.log("dataBytes: "+dataBytes)
+    console.log("dataByteCount: "+dataBytes.length)
+
+    if (dataBytes.length > 10000) {
+      playVideo(false)
+      console.log("URI is too long (max 10000): "+dataBytes.length)
       return
     }
 
@@ -196,6 +221,9 @@ export const HomeView = () => {
  
     meta.uriPubkey = uriPubkey
     meta.uriBytes = uriBytes
+ 
+    meta.dataPubkey = dataPubkey
+    meta.dataBytes = dataBytes
  
     let txid
     try {
