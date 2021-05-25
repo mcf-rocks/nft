@@ -348,6 +348,8 @@ export const HomeView = () => {
             <p id="tacc"></p>
             <p id="mint_meta_author"></p>
             <p id="mint_meta_title"></p>
+            <p id="mint_meta_uri"></p>
+            <p id="mint_meta_data"></p>
             <video autoPlay={false} muted={true} loop={true} id="video1">
 			  <source src="./creationEffect.mp4" type="video/mp4"/>
 			</video>
