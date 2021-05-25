@@ -100,6 +100,43 @@ export async function getOwnedTokenAccounts(connection, publicKey) {
     });
 }
 
+export async function metaUpdTitle({
+  wallet,
+  connection,
+  mint,           
+  meta,    
+}) {
+    let transaction = new Transaction();
+
+    let instruction_data = [2].concat(meta.titleBytes)
+   
+    console.log("Invoking contract for title update: "+META_WRITER_PROGRAM_ID)
+
+    const metaUpdTitleInstruction = new TransactionInstruction({
+      keys: [
+               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}, 
+               {pubkey: mint.publicKey, isSigner: false, isWritable: false},         
+               {pubkey: meta.authorPubkey, isSigner: false, isWritable: false},         
+               {pubkey: meta.titlePubkey, isSigner: false, isWritable: true},         
+            ],
+      programId: META_WRITER_PROGRAM_ID,
+      data: instruction_data,
+    })
+
+    transaction.add( metaUpdTitleInstruction )
+
+    const { blockhash, feeCalculator } = await connection.getRecentBlockhash()
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer = wallet.publicKey;
+    let signed = await wallet.signTransaction(transaction);
+
+    let txid =  await connection.sendRawTransaction(signed.serialize(), {
+      preflightCommitment: 'single',
+    });
+  
+    return txid;
+}
+
 export async function createAndInitializeMintWithMeta({
   wallet,
   connection,
@@ -242,9 +279,6 @@ export async function createAndInitializeMintWithMeta({
   });
   
   return txid;
-//  return await connection.sendTransaction(transaction, signers, {
-//    preflightCommitment: 'single',
-//  });
 }
 
 export async function createAndInitializeTokenAccount({

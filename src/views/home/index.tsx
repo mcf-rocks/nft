@@ -12,7 +12,7 @@ import { generateSVG } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
-import { findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
+import { metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
 import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { Account } from "@solana/web3.js";
 
@@ -246,7 +246,7 @@ export const HomeView = () => {
 
     // wait for transaction to be mined
 
-    const tStatus = await connection.confirmTransaction(txid)
+    let tStatus = await connection.confirmTransaction(txid)
 
     if (tStatus.value.err) {
       playVideo(false)
@@ -255,6 +255,40 @@ export const HomeView = () => {
       document.getElementById('status')!.innerHTML = "Transaction "+txid+" failed: "+tStatus.value.err
       return
     }
+
+    // set title - the reason we do this in separate transaction is because 1232 byte transaction limit
+    // there could be an animated checklist being ticked off for each transaction, or something...
+    // because there will need to be a bunch more for the data upload
+
+    try {
+      txid = await metaUpdTitle({
+        wallet,
+        connection,
+        mint,
+        meta,
+      })
+    } catch (error) {
+      playVideo(false)
+      console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+      console.log(error)
+      document.getElementById('status')!.innerHTML = "Title update transaction rejected: "+error.toString()
+      return
+    } 
+
+    // wait for transaction to be mined
+
+    tStatus = await connection.confirmTransaction(txid)
+
+    if (tStatus.value.err) {
+      playVideo(false)
+      console.log("FAILED - by node (node ran program but program failed)")
+      console.log(tStatus.value.err)
+      document.getElementById('status')!.innerHTML = "Title update transaction "+txid+" failed: "+tStatus.value.err
+      return
+    }
+
+
+    // end of transactions
 
 	showSVG(mint.publicKey.toBase58(),amount);
 	setTimeout(()=>{playVideo(false);},2500);

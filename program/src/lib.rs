@@ -170,6 +170,81 @@ fn process_instruction(
       )?;
 
     }
+
+    /***********************************
+     * set title
+     */
+
+    if 2 == instruction_data[0] {
+
+      let funder_info = next_account_info(account_info_iter)?;
+      let mint_info = next_account_info(account_info_iter)?;
+      let author_account_info = next_account_info(account_info_iter)?;
+      let title_account_info = next_account_info(account_info_iter)?;
+
+      if !funder_info.is_signer {
+          msg!("Author (funder) is not signer");
+          return Err(ProgramError::MissingRequiredSignature);
+      }
+
+      let expected_author_account_key = match Pubkey::create_with_seed(
+                &mint_info.key,
+                "nft_meta_author",
+                &program_id,
+            ) {
+                Ok(a) => a,
+                Err(_e) => {
+                    msg!("Error deriving author account");
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            };
+
+      if author_account_info.key.to_bytes() != expected_author_account_key.to_bytes() {
+         msg!("Author account address not as expected");
+         return Err(ProgramError::InvalidAccountData);
+      }
+ 
+      let author_data = author_account_info.try_borrow_data()?;
+
+      if 1 != author_data[0] {
+         msg!("Meta data not open for editing");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      if funder_info.key.to_bytes()[..] != author_data[1..33] {
+         msg!("Funder is not author");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      let expected_title_account_key = match Pubkey::create_with_seed(
+                &mint_info.key,
+                "nft_meta_title",
+                &program_id,
+            ) {
+                Ok(a) => a,
+                Err(_e) => {
+                    msg!("Error deriving title account");
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            };
+
+      if title_account_info.key.to_bytes() != expected_title_account_key.to_bytes() {
+         msg!("Title account address not as expected");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      let mut title_data = title_account_info.try_borrow_mut_data()?;
+
+      if instruction_data.len()-1 != title_data.len()  {
+        msg!("Title string is {} bytes long, but storage is {} bytes long", 
+           instruction_data.len()-1, 
+           title_data.len());
+        return Err(ProgramError::InvalidInstructionData);
+      }
+
+      title_data[..].clone_from_slice(&instruction_data[1..]);
+
+    }
  
     Ok(())
 }
@@ -193,7 +268,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_transaction() {
+    async fn test_transactions() {
         let program_id = Pubkey::new_unique();
 
         let mint_account = Keypair::new();
@@ -250,6 +325,9 @@ mod test {
         .start()
         .await;
 
+
+        // Initialize
+
         let mut transaction = Transaction::new_with_payer(
             &[Instruction {
                 program_id,
@@ -263,12 +341,34 @@ mod test {
                   AccountMeta::new_readonly(sysvar::rent::id(), false),
                   AccountMeta::new_readonly(solana_program::system_program::id(), false),
                 ],
-                data: vec![1, 20, 80, 0b00000000, 0b00000000, 0b00010011, 0b10001000],
+                data: vec![1, 5, 80, 0b00000000, 0b00000000, 0b00010011, 0b10001000],
             }],
             Some(&payer.pubkey()),
         );
         transaction.sign(&[&payer, &mint_account], recent_blockhash);
 
         assert_matches!(banks_client.process_transaction(transaction).await, Ok(()));
+
+        // Update title
+
+        let mut transaction = Transaction::new_with_payer(
+            &[Instruction {
+                program_id,
+                accounts: vec![
+                  AccountMeta::new(payer.pubkey(), true),
+                  AccountMeta::new(mint_account.pubkey(), false),
+                  AccountMeta::new(author_account, false),
+                  AccountMeta::new(title_account, false),
+                  AccountMeta::new_readonly(sysvar::rent::id(), false),
+                  AccountMeta::new_readonly(solana_program::system_program::id(), false),
+                ],
+                data: vec![2, 72, 69, 76, 76, 79],
+            }],
+            Some(&payer.pubkey()),
+        );
+        transaction.sign(&[&payer], recent_blockhash);
+
+        assert_matches!(banks_client.process_transaction(transaction).await, Ok(()));
     }
+
 }
