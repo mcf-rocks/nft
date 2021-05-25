@@ -1,6 +1,6 @@
 # 🏗 Solana App Scaffold
 Scaffolding for a dapp built on Solana
-
+    
 # Quickstart
 
 ```bash
