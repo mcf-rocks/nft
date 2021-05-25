@@ -34,6 +34,16 @@ import {
 
 const util = require('util')
 
+function toBytesBE( x ){
+    var bytes = [];
+    var i = 4;
+    do {
+    bytes[--i] = x & (255);
+    x = x>>8;
+    } while ( i )
+    return bytes;
+}
+
 export async function createWithSeed( base, seed, programId ) {
   return PublicKey.createWithSeed(base.publicKey, seed, programId)
 }
@@ -124,7 +134,7 @@ export async function createAndInitializeMintWithMeta({
   );
 
   /************************************************
-   * create and initialize metadata author account
+   * create and initialize metadata accounts
    */
 
   if (meta) {
@@ -133,7 +143,7 @@ export async function createAndInitializeMintWithMeta({
 
     const SYSTEM_PROGRAM_ID = SystemProgram.programId;
 
-    let instruction_data = new Uint8Array(2)
+    let instruction_data = new Uint8Array(7)
    
     // first byte: 1 = initialization
  
@@ -143,7 +153,19 @@ export async function createAndInitializeMintWithMeta({
  
     instruction_data[1] = meta.titleBytes.length;
 
-    console.log("Invoking contract: "+META_WRITER_PROGRAM_ID);
+    // third byte: number of bytes in URI (max 100) 
+ 
+    instruction_data[2] = meta.uriBytes.length;
+
+    // 4,5,6,7 bytes: number of bytes in data (big endian) (max 10000) 
+ 
+    const dataBytesBE = toBytesBE(meta.dataBytes.length)
+    instruction_data[3] = dataBytesBE[0]
+    instruction_data[4] = dataBytesBE[1]
+    instruction_data[5] = dataBytesBE[2]
+    instruction_data[6] = dataBytesBE[3]
+
+    console.log("Invoking contract: "+META_WRITER_PROGRAM_ID)
 
     const metaInitInstruction = new TransactionInstruction({
       keys: [
@@ -151,6 +173,8 @@ export async function createAndInitializeMintWithMeta({
                {pubkey: mint.publicKey, isSigner: true, isWritable: false},         
                {pubkey: meta.authorPubkey, isSigner: false, isWritable: true},         
                {pubkey: meta.titlePubkey, isSigner: false, isWritable: true},         
+               {pubkey: meta.uriPubkey, isSigner: false, isWritable: true},         
+               {pubkey: meta.dataPubkey, isSigner: false, isWritable: true},         
                {pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false}, 
                {pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
             ],
