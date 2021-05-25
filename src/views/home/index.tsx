@@ -123,7 +123,7 @@ export const HomeView = () => {
     const authorPubkey = await createWithSeed(mint, 'nft_meta_author', META_WRITER_PROGRAM_ID)
     console.log("MetaAuthorAccount will be: "+authorPubkey.toString());
 
-    // meta data - title
+    // meta data - title - max 100 char UTF-8 plain text describing item
 
     const titlePubkey = await createWithSeed(mint, 'nft_meta_title', META_WRITER_PROGRAM_ID)
     console.log("MetaTitleAccount will be: "+authorPubkey.toString());
@@ -148,6 +148,35 @@ export const HomeView = () => {
       return
     }
 
+    // meta data - uri - max 255 char UTF-8 internet url
+    // 
+    // this internet url understands the data (see next)
+    // and can interpret it (eg. render it, use it in some way)
+    // suggest standard is to HTTP POST the data if url 
+
+    const uriPubkey = await createWithSeed(mint, 'nft_meta_uri', META_WRITER_PROGRAM_ID)
+    console.log("MetaURIAccount will be: "+uriPubkey.toString());
+
+    let uri = "without uri";
+
+	let uriInput:any = document.getElementById("nft_meta_uri");
+
+	if(uriInput && uriInput.value.length > 0) {
+        uri = uriInput.value;
+    }
+
+    const uriBytes = toBytes(uri)
+
+    console.log("uri: "+uri)
+    console.log("uriBytes: "+uriBytes)
+    console.log("uriByteCount: "+uriBytes.length)
+
+    if (uriBytes.length > 255) {
+      playVideo(false)
+      console.log("URI is too long: "+uriBytes.length)
+      return
+    }
+
     // the token account address must be mapped so wallets can 'find' the token, this is the mapping...
 
     const tpa = await findProgramAddress( [ publicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.publicKey.toBuffer() ], ATACC_PROGRAM_ID)
@@ -164,6 +193,9 @@ export const HomeView = () => {
 
     meta.titlePubkey = titlePubkey
     meta.titleBytes = titleBytes
+ 
+    meta.uriPubkey = uriPubkey
+    meta.uriBytes = uriBytes
  
     let txid
     try {
@@ -202,6 +234,8 @@ export const HomeView = () => {
     document.getElementById('tacc')!.innerHTML =  "The Token Account: "+ taccPK.toString() 
     document.getElementById('mint_meta_author')!.innerHTML = "The Metadata Author Account (mint+'nft_meta_author): "+meta.authorPubkey.toString()
     document.getElementById('mint_meta_title')!.innerHTML = "The Metadata Title Account (mint+'nft_meta_title): "+meta.titlePubkey.toString()
+    document.getElementById('mint_meta_uri')!.innerHTML = "The Metadata URI Account (mint+'nft_meta_uri): "+meta.uriPubkey.toString()
+    document.getElementById('mint_meta_data')!.innerHTML = "The Metadata Generic Data Account (mint+'nft_meta_data): "+meta.dataPubkey.toString()
   }
   
   function playVideo(play=false){
@@ -265,8 +299,16 @@ export const HomeView = () => {
               <div style={inputBoxDiv}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
             </div> 
             <div style={inputParent}>
-              <div style={inputDescr}><p>NFT_META_TITLE</p></div>
+              <div style={inputDescr}><p>NFT META TITLE</p></div>
               <div style={inputBoxDiv}><input id="nft_meta_title" style={style.textInput} type={"text"} maxLength={100}/></div>
+            </div> 
+            <div style={inputParent}>
+              <div style={inputDescr}><p>NFT META URI</p></div>
+              <div style={inputBoxDiv}><input id="nft_meta_uri" style={style.textInput} type={"text"} maxLength={255}/></div>
+            </div> 
+            <div style={inputParent}>
+              <div style={inputDescr}><p>NFT META DATA</p></div>
+              <div style={inputBoxDiv}><textarea id="nft_meta_data" style={style.textInput} rows={10}  maxLength={10000}/></div>
             </div> 
             <div style={inputParent}>
               <div style={inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
