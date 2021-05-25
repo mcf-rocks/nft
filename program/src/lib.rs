@@ -41,10 +41,17 @@ fn process_instruction(
 
     if 1 == instruction_data[0] {
 
+      if instruction_data.len() != 7 {
+        msg!("Expected 7 bytes of instruction data");
+        return Err(ProgramError::InvalidInstructionData);
+      }
+
       let funder_info = next_account_info(account_info_iter)?;
       let mint_info = next_account_info(account_info_iter)?;
       let author_account_info = next_account_info(account_info_iter)?;
       let title_account_info = next_account_info(account_info_iter)?;
+      let uri_account_info = next_account_info(account_info_iter)?;
+      let data_account_info = next_account_info(account_info_iter)?;
       let rent_sysvar_info = next_account_info(account_info_iter)?;
       let system_program_info = next_account_info(account_info_iter)?;
 
@@ -110,6 +117,58 @@ fn process_instruction(
             ],
       )?;
 
+      let uri_bytes = instruction_data[2];
+
+      msg!("URI -- allocating only bytes={:?}", uri_bytes);
+
+      msg!("Creating URI account");
+      invoke(
+            &system_instruction::create_account_with_seed(
+                funder_info.key,
+                uri_account_info.key,
+                mint_info.key,
+                "nft_meta_uri",
+                1.max(rent.minimum_balance(uri_bytes as usize)),
+                uri_bytes as u64,
+                program_id,
+            ),
+            &[
+                funder_info.clone(),
+                uri_account_info.clone(),
+                mint_info.clone(),
+                system_program_info.clone(),
+            ],
+      )?;
+
+      let mut tmp_bytes:[u8; 4] = [0,0,0,0];
+      tmp_bytes[0] = instruction_data[3];
+      tmp_bytes[1] = instruction_data[4];
+      tmp_bytes[2] = instruction_data[5];
+      tmp_bytes[3] = instruction_data[6];
+
+      let data_bytes = u32::from_be_bytes(tmp_bytes);
+
+      msg!("Data -- allocating only bytes={:?}", data_bytes);
+
+      msg!("Creating generic data account");
+      invoke(
+            &system_instruction::create_account_with_seed(
+                funder_info.key,
+                data_account_info.key,
+                mint_info.key,
+                "nft_meta_data",
+                1.max(rent.minimum_balance(data_bytes as usize)),
+                data_bytes as u64,
+                program_id,
+            ),
+            &[
+                funder_info.clone(),
+                data_account_info.clone(),
+                mint_info.clone(),
+                system_program_info.clone(),
+            ],
+      )?;
+
     }
  
     Ok(())
@@ -124,6 +183,14 @@ mod test {
         solana_program_test::*,
         solana_sdk::{signature::Signer, transaction::Transaction, signer::keypair::Keypair},
     };
+
+    #[tokio::test]
+    async fn test_big_endian_sanity() {
+        assert_eq!(12,u32::from_be_bytes([0b00000000, 0b00000000, 0b00000000, 0b00001100]));
+        assert_eq!(5000,u32::from_be_bytes([0b00000000, 0b00000000, 0b00010011, 0b10001000]));
+        assert_eq!(10240,u32::from_be_bytes([0b00000000, 0b00000000, 0b00101000, 0b00000000]));
+        assert_eq!(123456789,u32::from_be_bytes([0b00000111, 0b01011011, 0b11001101, 0b00010101]));
+    }
 
     #[tokio::test]
     async fn test_transaction() {
@@ -153,8 +220,30 @@ mod test {
                 }
             };
 
+        let uri_account = match Pubkey::create_with_seed(
+                &mint_account.pubkey(),
+                "nft_meta_uri",
+                &program_id,
+            ) {
+                Ok(f) => f,
+                Err(e) => { 
+                    panic!("Error: {}", e);
+                }
+            };
+
+        let data_account = match Pubkey::create_with_seed(
+                &mint_account.pubkey(),
+                "nft_meta_data",
+                &program_id,
+            ) {
+                Ok(f) => f,
+                Err(e) => { 
+                    panic!("Error: {}", e);
+                }
+            };
+
         let (mut banks_client, payer, recent_blockhash) = ProgramTest::new(
-            "bpf-program-meta-writer",
+            "bpf_program_meta_writer",
             program_id,
             processor!(process_instruction),
         )
@@ -169,10 +258,12 @@ mod test {
                   AccountMeta::new(mint_account.pubkey(), true),
                   AccountMeta::new(author_account, false),
                   AccountMeta::new(title_account, false),
+                  AccountMeta::new(uri_account, false),
+                  AccountMeta::new(data_account, false),
                   AccountMeta::new_readonly(sysvar::rent::id(), false),
                   AccountMeta::new_readonly(solana_program::system_program::id(), false),
                 ],
-                data: vec![1],
+                data: vec![1, 20, 80, 0b00000000, 0b00000000, 0b00010011, 0b10001000],
             }],
             Some(&payer.pubkey()),
         );
