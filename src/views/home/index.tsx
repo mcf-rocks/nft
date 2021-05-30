@@ -14,7 +14,7 @@ import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
 import { metaUpdData, metaUpdURI, metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
 import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
-import { Account } from "@solana/web3.js";
+import { PublicKey, Account } from "@solana/web3.js";
 
 export const HomeView = () => {
   const connection = useConnection();
@@ -48,6 +48,12 @@ export const HomeView = () => {
       arr.push(utf8.charCodeAt(i));
     }
     return arr
+  }
+
+  function uintToString(uintArray:any) {
+    var encodedString = String.fromCharCode.apply(null, uintArray),
+        decodedString = decodeURIComponent(escape(encodedString));
+    return decodedString;
   }
 
   function grind(prefix:String):Account{
@@ -398,9 +404,34 @@ export const HomeView = () => {
 
     // seal transaction 
 
+    // TODO: call seal instruction on sc
+    //       instruction is done in sc
+
+
     // end of transactions
 
-	showSVG(mint.publicKey.toBase58(),amount);
+	//showSVG(mint.publicKey.toBase58(),amount);
+
+    // Read the account from chain, display it in the right pane
+    // obviously I'm assuming it's an SVG... if there were different types, I guess the URI field could distinguish
+
+    const metaDataAccount = await connection.getAccountInfo(new PublicKey(dataPubkey.toString()))
+
+    if ( metaDataAccount ) {
+
+      const svgText = uintToString(metaDataAccount.data)
+
+      let svgDiv:any = document.getElementById("svgDiv")
+
+      if(svgDiv){
+        svgDiv.innerHTML = svgText
+      }
+
+    } else {
+        console.log("No idea, it should exist, as we just made it")
+    }
+
+
 	setTimeout(()=>{playVideo(false);},2500);
 
     // just for debug
@@ -415,9 +446,13 @@ export const HomeView = () => {
   }
   
   function playVideo(play=false){
+
+// broke this somehow. sry
+/*
 	  let video:any = document.getElementById("video1");
 	  if(video && play){ video.play();}
 	  else{video.pause();}
+*/
   }
 
   function showSVG(mint:string,amount:number){
@@ -432,19 +467,74 @@ export const HomeView = () => {
 		},1000)
 	  }
   }
-  
+ 
+ 
   const mainDiv = {
+    display: 'flex',
+    backgroundColor: "black",
     width: "100%",
     textAlign: 'center',
-    marginTop: "30px",
+    marginTop: "10px",
+    marginBottom: "10px",
     overflowX:"hidden",
   } as React.CSSProperties;
 
-  const textInput = {
-	color:"black",
-	fontSize:"large",
-    width:"300px",
-  }
+  const leftPane = {
+    backgroundColor: "#1a2029",
+    height: "100%",
+    width: "50%",
+    textAlign: "center",
+    marginRight: "5px",
+  } as React.CSSProperties;
+
+  const leftPaneTop = {
+    display: 'flex',
+    backgroundColor: "#1a2029",
+    height: "500px",
+    width: "100%",
+    textAlign: "center",
+  } as React.CSSProperties;
+
+  const leftPaneBottom = {
+    backgroundColor: "#1a2029",
+    width: "100%",
+    textAlign: "center",
+  } as React.CSSProperties;
+
+  const rightPane = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: "#1a2029",
+    height: "100%",
+    width: "50%",
+    textAlign: "center",
+    marginLeft: "5px",
+  } as React.CSSProperties;
+
+  const row = {
+    display: 'flex',
+    marginTop: "5px",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: "100%",
+  } as React.CSSProperties;
+
+  const col = {
+    flexDirection: "column",
+    flexBasis: "100%",
+    flex: 1,
+  } as React.CSSProperties;
+
+  const leftCol = {
+    paddingTop: "5px",
+    height: "100%",
+  } as React.CSSProperties;
+
+  const rightCol = {
+    textAlign: "left",
+    height: "100%",
+  } as React.CSSProperties;
 
   const vanityInput = {
 	color:"black",
@@ -452,53 +542,132 @@ export const HomeView = () => {
     width:"60px",
   }
 
-  const style = {
-	mainDiv,  
-	textInput,
-	vanityInput,
+  const titleInput = {
+	color:"black",
+	fontSize:"large",
+    width:"300px",
   }
 
-  const inputParent = {
+  const uriInput = {
+	color:"black",
+	fontSize:"large",
+    width:"400px",
+  }
+
+  const dataInput = {
+	color:"black",
+	fontSize:"large",
+    marginTop: '5px',
+    width:"400px",
+  }
+
+  const inputDescr = {
+    padding: '10px',
+    paddingTop: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: '55px',
   } as React.CSSProperties;
 
   const inputBoxDiv = {
     padding: '10px',
   } as React.CSSProperties;
 
-  const inputDescr = {
-    padding: '10px',
-    paddingTop: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as React.CSSProperties;
-
   const shim = {
-    paddingTop: '10px',
-  } as React.CSSProperties;
+    height: "20px",
+  }
+
+  const textOutput = {
+	fontSize:"small",
+  }
+
+  const style = {
+	mainDiv,  
+	leftPane, 
+	leftPaneTop, 
+	leftPaneBottom, 
+    row,
+    col, 
+    leftCol, 
+    rightCol, 
+	rightPane,  
+	vanityInput,
+	titleInput,
+	uriInput,
+	dataInput,
+	inputDescr,
+	inputBoxDiv,
+    shim,
+    textOutput,
+  }
+
+
+
 
   return (
         <div style={style.mainDiv}>
+
+        <div style={style.leftPane}>
+          <div style={style.leftPaneTop}>
+            <div style={style.row}>
+              <div style={style.col}>
+                <div style={style.leftCol}>
+                  <div style={style.inputDescr}><p>MINT VANITY PREFIX:</p></div>
+                  <div style={style.inputDescr}><p>NFT TITLE:</p></div>
+                  <div style={style.inputDescr}><p>NFT URI:</p></div>
+                  <div style={style.inputDescr}><p>NFT DATA:</p></div>
+                  <div style={style.shim}></div>
+                  <div style={style.inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
+                  <div style={style.inputBoxDiv}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
+                </div>
+              </div>
+              <div style={style.col}>
+                <div style={style.rightCol}>
+                  <div style={style.inputBoxDiv}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
+                  <div style={style.inputBoxDiv}><input id="nft_meta_title" style={style.titleInput} type={"text"} maxLength={100}/></div>
+                  <div style={style.inputBoxDiv}><input id="nft_meta_uri" style={style.uriInput} type={"text"} maxLength={255}/></div>
+                  <div style={style.inputBoxDiv}><textarea id="nft_meta_data" style={style.dataInput} rows={10}  maxLength={10000}/></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={style.leftPaneBottom}>
+              <div style={style.textOutput}><p id="status"></p></div>
+              <div style={style.textOutput}><p id="mint"></p></div>
+              <div style={style.textOutput}><p id="tacc"></p></div>
+              <div style={style.textOutput}><p id="mint_meta_author"></p></div>
+              <div style={style.textOutput}><p id="mint_meta_title"></p></div>
+              <div style={style.textOutput}><p id="mint_meta_uri"></p></div>
+              <div style={style.textOutput}><p id="mint_meta_data"></p></div>
+          </div>
+        </div>
+
+        <div style={style.rightPane}>
+          <div id='svgDiv'></div>
+        </div>
+
+        </div>
+  );
+
+/*
+  return (
+        <div style={style.mainDiv}>
+        <div style={style.leftPane}>
           <div id="svgDiv"></div>
-          <p>SOL: {SOL.balance}</p>
             <div style={inputParent}>
-              <div style={inputDescr}><p>VANITY PREFIX:</p></div>
+              <div style={inputDescr}><p>MINT VANITY PREFIX:</p></div>
               <div style={inputBoxDiv}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
             </div> 
             <div style={inputParent}>
-              <div style={inputDescr}><p>NFT META TITLE</p></div>
+              <div style={inputDescr}><p>NFT TITLE:</p></div>
               <div style={inputBoxDiv}><input id="nft_meta_title" style={style.textInput} type={"text"} maxLength={100}/></div>
             </div> 
             <div style={inputParent}>
-              <div style={inputDescr}><p>NFT META URI</p></div>
+              <div style={inputDescr}><p>NFT URI:</p></div>
               <div style={inputBoxDiv}><input id="nft_meta_uri" style={style.textInput} type={"text"} maxLength={255}/></div>
             </div> 
             <div style={inputParent}>
-              <div style={inputDescr}><p>NFT META DATA</p></div>
+              <div style={inputDescr}><p>NFT DATA:</p></div>
               <div style={inputBoxDiv}><textarea id="nft_meta_data" style={style.textInput} rows={10}  maxLength={10000}/></div>
             </div> 
             <div style={inputParent}>
@@ -518,5 +687,7 @@ export const HomeView = () => {
 			</video>
 			Video by Luis Quintero from Pexels
         </div>
+        </div>
   );
+*/
 };
