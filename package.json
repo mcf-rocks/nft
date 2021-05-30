@@ -2,6 +2,7 @@
   "name": "dapp-scaffold",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@ant-design/icons": "^4.5.0",
     "@craco/craco": "^5.7.0",
