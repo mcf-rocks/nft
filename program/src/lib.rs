@@ -419,7 +419,60 @@ fn process_instruction(
       data[start_position..end_position].clone_from_slice(&instruction_data[5..]);
 
     }
+
+    /*****************************************
+     * Seal - data can never be changed again
+     */
  
+    if 5 == instruction_data[0] {
+
+      let funder_info = next_account_info(account_info_iter)?;
+      let mint_info = next_account_info(account_info_iter)?;
+      let author_account_info = next_account_info(account_info_iter)?;
+
+      if instruction_data.len() != 1 {
+          msg!("Seal instruction takes no data");
+          return Err(ProgramError::InvalidInstructionData);
+      }
+
+      if !funder_info.is_signer {
+          msg!("Author (funder) is not signer");
+          return Err(ProgramError::MissingRequiredSignature);
+      }
+
+      let expected_author_account_key = match Pubkey::create_with_seed(
+                &mint_info.key,
+                "nft_meta_author",
+                &program_id,
+            ) {
+                Ok(a) => a,
+                Err(_e) => {
+                    msg!("Error deriving author account");
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            };
+
+      if author_account_info.key.to_bytes() != expected_author_account_key.to_bytes() {
+         msg!("Author account address not as expected");
+         return Err(ProgramError::InvalidAccountData);
+      }
+ 
+      let mut author_data = author_account_info.try_borrow_mut_data()?;
+
+      if 1 != author_data[0] {
+         msg!("Meta data not open for editing");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      if funder_info.key.to_bytes()[..] != author_data[1..33] {
+         msg!("Funder is not author");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      author_data[0] = 2u8;
+
+    }
+   
     Ok(())
 }
 
@@ -579,6 +632,25 @@ mod test {
         transaction.sign(&[&payer], recent_blockhash);
 
         assert_matches!(banks_client.process_transaction(transaction).await, Ok(()));
+
+        // Seal
+
+        let mut transaction = Transaction::new_with_payer(
+            &[Instruction {
+                program_id,
+                accounts: vec![
+                  AccountMeta::new(payer.pubkey(), true),
+                  AccountMeta::new(mint_account.pubkey(), false),
+                  AccountMeta::new(author_account, false),
+                ],
+                data: vec![5 ],
+            }],
+            Some(&payer.pubkey()),
+        );
+        transaction.sign(&[&payer], recent_blockhash);
+
+        assert_matches!(banks_client.process_transaction(transaction).await, Ok(()));
+
     }
 
 }

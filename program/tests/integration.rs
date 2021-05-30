@@ -1,5 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
+/*
 use {
     assert_matches::*,
     solana_program::{
@@ -9,6 +10,7 @@ use {
     solana_sdk::{signature::Signer, transaction::Transaction},
     solana_validator::test_validator::*,
 };
+*/
 
 #[test]
 fn test_validator_transaction() {
