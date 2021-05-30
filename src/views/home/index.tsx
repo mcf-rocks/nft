@@ -12,7 +12,7 @@ import { generateSVG } from "../../utils/utils";
 import { useConnection } from "../../contexts/connection";
 import { useWallet } from "../../contexts/wallet";
 import { notify } from "../../utils/notifications";
-import { metaUpdURI, metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
+import { metaUpdData, metaUpdURI, metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
 import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { Account } from "@solana/web3.js";
 
@@ -127,14 +127,16 @@ export const HomeView = () => {
     // meta data - title - max 100 char UTF-8 plain text describing item
 
     const titlePubkey = await createWithSeed(mint, 'nft_meta_title', META_WRITER_PROGRAM_ID)
-    console.log("MetaTitleAccount will be: "+titlePubkey.toString());
+    console.log("MetaTitleAccount is: "+titlePubkey.toString());
 
-    let title = "without title";
+    let title = "";
 
 	let titleInput:any = document.getElementById("nft_meta_title");
 
 	if(titleInput && titleInput.value.length > 0) {
         title = titleInput.value;
+    } else {
+        console.log("No title - account will not be updated");
     }
 
     const titleBytes = toBytes(title)
@@ -164,6 +166,8 @@ export const HomeView = () => {
 
 	if(uriInput && uriInput.value.length > 0) {
         uri = uriInput.value;
+    } else {
+        console.log("No uri - account will not be updated");
     }
 
     const uriBytes = toBytes(uri)
@@ -189,6 +193,8 @@ export const HomeView = () => {
 
 	if(dataInput && dataInput.value.length > 0) {
         data = dataInput.value;
+    } else {
+        console.log("No data - account will not be updated");
     }
 
     const dataBytes = toBytes(data)
@@ -258,74 +264,146 @@ export const HomeView = () => {
 
     // set title transaction
 
-    try {
-      txid = await metaUpdTitle({
-        wallet,
-        connection,
-        mint,
-        meta,
-      })
-    } catch (error) {
-      playVideo(false)
-      console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
-      console.log(error)
-      document.getElementById('status')!.innerHTML = "Title update transaction rejected: "+error.toString()
-      return
-    } 
+    if ( title ) {
+        try {
+          txid = await metaUpdTitle({
+            wallet,
+            connection,
+            mint,
+            meta,
+          })
+        } catch (error) {
+          playVideo(false)
+          console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+          console.log(error)
+          document.getElementById('status')!.innerHTML = "Title update transaction rejected: "+error.toString()
+          return
+        } 
 
-    console.log("Title set tx:"+txid)
+        console.log("Title set tx:"+txid)
 
-    // wait for transaction to be mined
+        // wait for transaction to be mined
 
-    tStatus = await connection.confirmTransaction(txid)
+        tStatus = await connection.confirmTransaction(txid)
 
-    if (tStatus.value.err) {
-      playVideo(false)
-      console.log("FAILED - by node (node ran program but program failed)")
-      console.log(tStatus.value.err)
-      document.getElementById('status')!.innerHTML = "Title update transaction "+txid+" failed: "+tStatus.value.err
-      return
+        if (tStatus.value.err) {
+          playVideo(false)
+          console.log("FAILED - by node (node ran program but program failed)")
+          console.log(tStatus.value.err)
+          document.getElementById('status')!.innerHTML = "Title update transaction "+txid+" failed: "+tStatus.value.err
+          return
+        }
+
+        console.log("Title set done")
     }
-
-    console.log("Title set done")
 
     // set uri transaction
 
-    try {
-      txid = await metaUpdURI({
-        wallet,
-        connection,
-        mint,
-        meta,
-      })
-    } catch (error) {
-      playVideo(false)
-      console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
-      console.log(error)
-      document.getElementById('status')!.innerHTML = "URI update transaction rejected: "+error.toString()
-      return
-    } 
+    if ( uri ) {
+        try {
+          txid = await metaUpdURI({
+            wallet,
+            connection,
+            mint,
+            meta,
+          })
+        } catch (error) {
+          playVideo(false)
+          console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+          console.log(error)
+          document.getElementById('status')!.innerHTML = "URI update transaction rejected: "+error.toString()
+          return
+        } 
 
-    console.log("URI set tx:"+txid)
+        console.log("URI set tx:"+txid)
 
-    // wait for transaction to be mined
+        // wait for transaction to be mined
 
-    tStatus = await connection.confirmTransaction(txid)
+        tStatus = await connection.confirmTransaction(txid)
 
-    if (tStatus.value.err) {
-      playVideo(false)
-      console.log("FAILED - by node (node ran program but program failed)")
-      console.log(tStatus.value.err)
-      document.getElementById('status')!.innerHTML = "URI update transaction "+txid+" failed: "+tStatus.value.err
-      return
+        if (tStatus.value.err) {
+          playVideo(false)
+          console.log("FAILED - by node (node ran program but program failed)")
+          console.log(tStatus.value.err)
+          document.getElementById('status')!.innerHTML = "URI update transaction "+txid+" failed: "+tStatus.value.err
+          return
+        }
+
+        console.log("URI set done")
     }
 
-    console.log("URI set done")
+    // set data transaction
+
+    if ( data ) {
+
+        const chunkSize = 957  // because max transaction 1232 bytes 
+
+        const numChunks = Math.ceil(data.length / chunkSize)
+
+        for(let chunk=0; chunk<numChunks; chunk++) {
+
+            console.log("Write chunk "+ (chunk+1) +" of "+numChunks)
+
+            let processed = false;
+
+            while( !processed ) {
+
+                try {
+                  txid = await metaUpdData({
+                    wallet,
+                    connection,
+                    mint,
+                    meta,
+                    chunkSize,
+                    chunk
+                  })
+                } catch (error) {
+                  playVideo(false)
+                  console.log("REJECTED - was not submitted (probably because transaction simulation failed; funds? recentblockhash?)")
+                  console.log(error)
+                  document.getElementById('status')!.innerHTML = "Data update "+ (chunk+1) +" of "+numChunks+" transaction rejected: "+error.toString()
+                  return
+                } 
+
+                console.log("Data set tx:"+txid)
+
+                // wait for transaction to be mined
+
+                try {
+                  tStatus = await connection.confirmTransaction(txid)
+                } catch(error) {
+
+                    // wasn't found after 30 seconds, probably got dropped
+                    // need to make new transaction and submit it
+                    // does not happen often....
+   
+                    console.log("Transaction not found in ledger after 30 seconds, try with new transaction")
+                    continue
+                }
+ 
+                processed = true
+ 
+                if (tStatus.value.err) {
+                    playVideo(false)
+                    console.log("FAILED - by node (node ran program but program failed)")
+                    console.log(tStatus.value.err)
+                    document.getElementById('status')!.innerHTML = "Data update transaction "+txid+" failed: "+tStatus.value.err
+                    return
+                }
+            }
+
+            console.log("Data set done "+ (chunk+1) +" of "+numChunks);
+        }
+    }
+
+    // seal transaction 
 
     // end of transactions
 
 	showSVG(mint.publicKey.toBase58(),amount);
 	setTimeout(()=>{playVideo(false);},2500);
+
+    // just for debug
  
     document.getElementById('status')!.innerHTML = "Transaction: "+txid+" processed in slot "+tStatus.context.slot
     document.getElementById('mint')!.innerHTML = "The Mint: "+mint.publicKey.toString()

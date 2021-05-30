@@ -11,6 +11,7 @@ use solana_program::{
     rent::Rent,
     system_instruction,
     program::{invoke},
+    log::sol_log_compute_units,
 };
 
 solana_program::declare_id!("MWRTtsXSs2dUDxAbVvREHDVZP8QhK1JE7SGzYbQ7joo");
@@ -21,13 +22,15 @@ fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    msg!(
+
+// this msg! will *eat* the compute units...
+/*    msg!(
         "process_instruction: {}: {} accounts, data={:?}",
         program_id,
         accounts.len(),
         instruction_data
     );
-
+*/
     if instruction_data.len() == 0 {
       msg!("No instruction data");
       return Err(ProgramError::InvalidInstructionData);
@@ -418,6 +421,7 @@ fn process_instruction(
 
       data[start_position..end_position].clone_from_slice(&instruction_data[5..]);
 
+      sol_log_compute_units();
     }
 
     /*****************************************

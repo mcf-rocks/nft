@@ -137,6 +137,51 @@ export async function metaUpdURI({
     return txid;
 }
 
+export async function metaUpdData({
+  wallet,
+  connection,
+  mint,           
+  meta,    
+  chunkSize,
+  chunk,
+}) {
+    let transaction = new Transaction()
+
+    const startPosition = chunk * chunkSize
+
+    const endPosition = Math.min(startPosition+chunkSize, meta.dataBytes.length)
+
+    const chunkBytes = meta.dataBytes.slice(startPosition, endPosition)
+
+    let instruction_data = [4].concat(toBytesBE(startPosition)).concat(chunkBytes)
+   
+    console.log("Invoking contract for data update: "+META_WRITER_PROGRAM_ID+" start: "+startPosition+" end: "+endPosition)
+
+    const metaUpdDataInstruction = new TransactionInstruction({
+      keys: [
+               {pubkey: wallet.publicKey, isSigner: true, isWritable: false}, 
+               {pubkey: mint.publicKey, isSigner: false, isWritable: false},         
+               {pubkey: meta.authorPubkey, isSigner: false, isWritable: false},         
+               {pubkey: meta.dataPubkey, isSigner: false, isWritable: true},         
+            ],
+      programId: META_WRITER_PROGRAM_ID,
+      data: instruction_data,
+    })
+
+    transaction.add( metaUpdDataInstruction )
+
+    const { blockhash, feeCalculator } = await connection.getRecentBlockhash()
+    transaction.recentBlockhash = blockhash
+    transaction.feePayer = wallet.publicKey;
+    let signed = await wallet.signTransaction(transaction);
+
+    let txid =  await connection.sendRawTransaction(signed.serialize(), {
+      preflightCommitment: 'single', skipPreflight: true,
+    });
+  
+    return txid;
+}
+
 export async function metaUpdTitle({
   wallet,
   connection,
