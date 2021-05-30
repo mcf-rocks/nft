@@ -1,0 +1,5 @@
+# reads account data as a UTF-8 byte array and converts to string
+# this should match the original string... as it does!
+
+node account_2_text.js testnet 2T9FWVW3ttwM1aa3At7AibC7n8uGcUBVysphHReuwBCF > test2.svg
+diff ./test2.svg ../test.svg 
