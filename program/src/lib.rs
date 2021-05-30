@@ -325,6 +325,100 @@ fn process_instruction(
       uri_data[..].clone_from_slice(&instruction_data[1..]);
 
     }
+
+    /***********************************
+     * set data
+     * 
+     * not possible to set all data in one go, 
+     * divide into chunks and use multiple transactions
+     *
+     * first byte is instruction
+     * next 4 bytes are u32 as big-endian, which is start position
+     * in the on-chain account to write data to, which is rest of instruction
+     */
+
+    if 4 == instruction_data[0] {
+
+      let funder_info = next_account_info(account_info_iter)?;
+      let mint_info = next_account_info(account_info_iter)?;
+      let author_account_info = next_account_info(account_info_iter)?;
+      let data_account_info = next_account_info(account_info_iter)?;
+
+      let mut tmp_bytes:[u8; 4] = [0,0,0,0];
+      tmp_bytes[0] = instruction_data[1];
+      tmp_bytes[1] = instruction_data[2];
+      tmp_bytes[2] = instruction_data[3];
+      tmp_bytes[3] = instruction_data[4];
+      let start_position = u32::from_be_bytes(tmp_bytes) as usize;
+
+      let data_length = instruction_data.len() - 5;
+
+      if !funder_info.is_signer {
+          msg!("Author (funder) is not signer");
+          return Err(ProgramError::MissingRequiredSignature);
+      }
+
+      let expected_author_account_key = match Pubkey::create_with_seed(
+                &mint_info.key,
+                "nft_meta_author",
+                &program_id,
+            ) {
+                Ok(a) => a,
+                Err(_e) => {
+                    msg!("Error deriving author account");
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            };
+
+      if author_account_info.key.to_bytes() != expected_author_account_key.to_bytes() {
+         msg!("Author account address not as expected");
+         return Err(ProgramError::InvalidAccountData);
+      }
+ 
+      let author_data = author_account_info.try_borrow_data()?;
+
+      if 1 != author_data[0] {
+         msg!("Meta data not open for editing");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      if funder_info.key.to_bytes()[..] != author_data[1..33] {
+         msg!("Funder is not author");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      let expected_data_account_key = match Pubkey::create_with_seed(
+                &mint_info.key,
+                "nft_meta_data",
+                &program_id,
+            ) {
+                Ok(a) => a,
+                Err(_e) => {
+                    msg!("Error deriving data account");
+                    return Err(ProgramError::InvalidAccountData);
+                }
+            };
+
+      if data_account_info.key.to_bytes() != expected_data_account_key.to_bytes() {
+         msg!("Data account address not as expected");
+         return Err(ProgramError::InvalidAccountData);
+      }
+
+      let mut data = data_account_info.try_borrow_mut_data()?;
+
+      let end_position = start_position + data_length;
+
+      if end_position > data.len() {
+        msg!("Attempting to write beyond account size, start at {} end at {}, but storage is {} bytes long", 
+           start_position, 
+           end_position, 
+           data.len());
+        return Err(ProgramError::InvalidInstructionData);
+      }
+
+      data[start_position..end_position].clone_from_slice(&instruction_data[5..]);
+
+    }
  
     Ok(())
 }
@@ -439,8 +533,6 @@ mod test {
                   AccountMeta::new(mint_account.pubkey(), false),
                   AccountMeta::new(author_account, false),
                   AccountMeta::new(title_account, false),
-                  AccountMeta::new_readonly(sysvar::rent::id(), false),
-                  AccountMeta::new_readonly(solana_program::system_program::id(), false),
                 ],
                 data: vec![2, 72, 69, 76, 76, 79],
             }],
@@ -460,10 +552,27 @@ mod test {
                   AccountMeta::new(mint_account.pubkey(), false),
                   AccountMeta::new(author_account, false),
                   AccountMeta::new(uri_account, false),
-                  AccountMeta::new_readonly(sysvar::rent::id(), false),
-                  AccountMeta::new_readonly(solana_program::system_program::id(), false),
                 ],
                 data: vec![3, 104, 116, 116, 112, 115, 58, 47, 47, 109, 99, 102, 46, 114, 111, 99, 107, 115,],
+            }],
+            Some(&payer.pubkey()),
+        );
+        transaction.sign(&[&payer], recent_blockhash);
+
+        assert_matches!(banks_client.process_transaction(transaction).await, Ok(()));
+    
+        // Update data
+
+        let mut transaction = Transaction::new_with_payer(
+            &[Instruction {
+                program_id,
+                accounts: vec![
+                  AccountMeta::new(payer.pubkey(), true),
+                  AccountMeta::new(mint_account.pubkey(), false),
+                  AccountMeta::new(author_account, false),
+                  AccountMeta::new(data_account, false),
+                ],
+                data: vec![4, 0, 0, 0, 5, 65, 66, 67, 68, 69 ],
             }],
             Some(&payer.pubkey()),
         );
