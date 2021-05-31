@@ -1,4 +1,4 @@
-import { Button, Col, Row } from "antd";
+import { Button, Col, Input,Row } from "antd";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ConnectButton } from "../../components/ConnectButton";
@@ -198,7 +198,9 @@ export const HomeView = () => {
 	let dataInput:any = document.getElementById("nft_meta_data");
 
 	if(dataInput && dataInput.value.length > 0) {
+		dataInput.value = dataInput.value.replaceAll("xxTITLExx",title).replaceAll("xxMINTxx",mint.publicKey.toBase58());
         data = dataInput.value;
+        console.log(data);
     } else {
         console.log("No data - account will not be updated");
     }
@@ -446,17 +448,29 @@ export const HomeView = () => {
   }
   
   function playVideo(play=false){
-
-// broke this somehow. sry
-/*
 	  let video:any = document.getElementById("video1");
 	  if(video && play){ video.play();}
 	  else{video.pause();}
-*/
   }
 
-  function showSVG(mint:string,amount:number){
-      let svgText = generateSVG(mint,amount);
+ function getSVGText(evt:any){
+	let title = "xxTITLExx";
+	let amount = 1;
+	let mint = "xxMINTxx";
+	let nft_title:any = document.getElementById("mint_meta_title'");
+	let nft_text_area:any = document.getElementById("nft_meta_data");	
+	if(nft_title){title = nft_title.value};	    
+	let svg_text = generateSVG(mint,title,amount);
+	if(evt.currentTarget.checked){
+		nft_text_area.value = svg_text;
+	}
+	else{
+		nft_text_area.value = "";
+	}
+ }
+
+  function showSVG(mint:string,title:string,amount:number){
+      let svgText = generateSVG(mint,title,amount);
       let svgDiv:any = document.getElementById("svgDiv");
       if(svgDiv){
 		svgDiv.innerHTML = svgText;
@@ -510,6 +524,7 @@ export const HomeView = () => {
     width: "50%",
     textAlign: "center",
     marginLeft: "5px",
+    overflow:"hidden",
   } as React.CSSProperties;
 
   const row = {
@@ -542,6 +557,12 @@ export const HomeView = () => {
     width:"60px",
   }
 
+  const svgImage ={
+	  position:"absolute",
+	  top:"17vh",
+	  right:"17vw",
+  } as React.CSSProperties;
+  
   const titleInput = {
 	color:"black",
 	fontSize:"large",
@@ -598,10 +619,9 @@ export const HomeView = () => {
 	inputDescr,
 	inputBoxDiv,
     shim,
+    svgImage,
     textOutput,
   }
-
-
 
 
   return (
@@ -619,6 +639,7 @@ export const HomeView = () => {
                   <div style={style.shim}></div>
                   <div style={style.inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
                   <div style={style.inputBoxDiv}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
+                  <div style={style.inputBoxDiv}><Input type="checkbox" onClick={getSVGText} />USE DEFAULT DATA</div>
                 </div>
               </div>
               <div style={style.col}>
@@ -643,7 +664,11 @@ export const HomeView = () => {
         </div>
 
         <div style={style.rightPane}>
-          <div id='svgDiv'></div>
+            <video autoPlay={false} muted={true} loop={true} id="video1">
+			  <source src="./creationEffect.mp4" type="video/mp4"/>
+			</video>
+			Video by Luis Quintero from Pexels
+          <div id='svgDiv' style={style.svgImage}></div>
         </div>
 
         </div>
