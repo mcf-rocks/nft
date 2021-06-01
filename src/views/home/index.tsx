@@ -1,4 +1,4 @@
-import { Button, Col, Input,Row } from "antd";
+import { Button, Card,Col, Input,Row,Switch } from "antd";
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ConnectButton } from "../../components/ConnectButton";
@@ -15,6 +15,7 @@ import { notify } from "../../utils/notifications";
 import { metaUpdData, metaUpdURI, metaUpdTitle, findProgramAddress, createAndInitializeMintWithMeta, createWithSeed } from "../../utils/token_funcs";
 import { META_WRITER_PROGRAM_ID, TOKEN_PROGRAM_ID, ATACC_PROGRAM_ID } from "../../utils/program_addresses";
 import { PublicKey, Account } from "@solana/web3.js";
+import microchip from "../../utils/microchip.svg";
 
 export const HomeView = () => {
   const connection = useConnection();
@@ -453,7 +454,7 @@ export const HomeView = () => {
 	  else{video.pause();}
   }
 
- function getSVGText(evt:any){
+ function getSVGText(checked:boolean){
 	let title = "xxTITLExx";
 	let amount = 1;
 	let mint = "xxMINTxx";
@@ -461,7 +462,7 @@ export const HomeView = () => {
 	let nft_text_area:any = document.getElementById("nft_meta_data");	
 	if(nft_title){title = nft_title.value};	    
 	let svg_text = generateSVG(mint,title,amount);
-	if(evt.currentTarget.checked){
+	if(checked){
 		nft_text_area.value = svg_text;
 	}
 	else{
@@ -482,7 +483,6 @@ export const HomeView = () => {
 	  }
   }
  
- 
   const mainDiv = {
     display: 'flex',
     backgroundColor: "black",
@@ -494,25 +494,25 @@ export const HomeView = () => {
   } as React.CSSProperties;
 
   const leftPane = {
-    backgroundColor: "#1a2029",
+    backgroundColor: "black",
     height: "100%",
     width: "50%",
-    textAlign: "center",
+    textAlign: "left",
     marginRight: "5px",
   } as React.CSSProperties;
 
   const leftPaneTop = {
     display: 'flex',
-    backgroundColor: "#1a2029",
+    backgroundColor: "black",
     height: "500px",
     width: "100%",
-    textAlign: "center",
+    textAlign: "left",
   } as React.CSSProperties;
 
   const leftPaneBottom = {
     backgroundColor: "#1a2029",
     width: "100%",
-    textAlign: "center",
+    textAlign: "left",
   } as React.CSSProperties;
 
   const rightPane = {
@@ -552,11 +552,18 @@ export const HomeView = () => {
   } as React.CSSProperties;
 
   const vanityInput = {
-	color:"black",
+	borderColor:"white",	  
+	color:"white",
 	fontSize:"large",
-    width:"60px",
+    width:"400px",
   }
 
+  const submitButton ={
+	backgroundColor:"#2abdd2",
+	color:"black",
+	width:"100%",
+  } as React.CSSProperties;
+  
   const svgImage ={
 	  position:"absolute",
 	  top:"17vh",
@@ -564,13 +571,15 @@ export const HomeView = () => {
   } as React.CSSProperties;
   
   const titleInput = {
-	color:"black",
+	borderColor:"white",	  
+	color:"white",
 	fontSize:"large",
-    width:"300px",
+    width:"400px",
   }
 
   const uriInput = {
-	color:"black",
+	borderColor:"white",	  
+	color:"white",
 	fontSize:"large",
     width:"400px",
   }
@@ -587,7 +596,7 @@ export const HomeView = () => {
     paddingTop: '10px',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'left',
   } as React.CSSProperties;
 
   const inputBoxDiv = {
@@ -619,6 +628,7 @@ export const HomeView = () => {
 	inputDescr,
 	inputBoxDiv,
     shim,
+    submitButton,
     svgImage,
     textOutput,
   }
@@ -626,41 +636,56 @@ export const HomeView = () => {
 
   return (
         <div style={style.mainDiv}>
-
         <div style={style.leftPane}>
-          <div style={style.leftPaneTop}>
-            <div style={style.row}>
-              <div style={style.col}>
-                <div style={style.leftCol}>
-                  <div style={style.inputDescr}><p>MINT VANITY PREFIX:</p></div>
-                  <div style={style.inputDescr}><p>NFT TITLE:</p></div>
-                  <div style={style.inputDescr}><p>NFT URI:</p></div>
-                  <div style={style.inputDescr}><p>NFT DATA:</p></div>
-                  <div style={style.shim}></div>
-                  <div style={style.inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
-                  <div style={style.inputBoxDiv}><Button onClick={newnft}>GENERATE NEW NFT</Button></div>
-                  <div style={style.inputBoxDiv}><Input type="checkbox" onClick={getSVGText} />USE DEFAULT DATA</div>
-                </div>
-              </div>
-              <div style={style.col}>
-                <div style={style.rightCol}>
-                  <div style={style.inputBoxDiv}><input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
-                  <div style={style.inputBoxDiv}><input id="nft_meta_title" style={style.titleInput} type={"text"} maxLength={100}/></div>
-                  <div style={style.inputBoxDiv}><input id="nft_meta_uri" style={style.uriInput} type={"text"} maxLength={255}/></div>
-                  <div style={style.inputBoxDiv}><textarea id="nft_meta_data" style={style.dataInput} rows={10}  maxLength={10000}/></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={style.leftPaneBottom}>
-              <div style={style.textOutput}><p id="status"></p></div>
-              <div style={style.textOutput}><p id="mint"></p></div>
-              <div style={style.textOutput}><p id="tacc"></p></div>
-              <div style={style.textOutput}><p id="mint_meta_author"></p></div>
-              <div style={style.textOutput}><p id="mint_meta_title"></p></div>
-              <div style={style.textOutput}><p id="mint_meta_uri"></p></div>
-              <div style={style.textOutput}><p id="mint_meta_data"></p></div>
-          </div>
+         <Card 
+			 cover={<img src="./microchip.svg" alt="microchip Icons made by freepik.com flaticon.com" className="hue" />}
+			 style={{ 
+				 height:"95%",
+				 width: "80%",
+				 background:"black",
+				 border:"0.02em solid white",
+				 display:"block",
+				 margin:"auto",
+				 top:"2vh",
+				 overflowX:"hidden",
+			  }}>
+			<div style={style.leftPaneTop}>
+				<div style={style.row}>
+				  <div style={style.col}>
+					<div style={style.leftCol}>
+					  <div style={style.inputDescr}><p>MINT VANITY PREFIX:</p></div>
+					  <div style={style.inputDescr}><p>NFT TITLE:</p></div>
+					  <div style={style.inputDescr}><p>NFT URI:</p></div>
+					  <div style={style.inputDescr}> USE DEFAULT DATA</div>					  
+					  <div style={style.shim}></div>
+					  <div style={style.inputDescr}><p>NFT DATA:</p></div>
+					  <div style={style.inputBoxDiv}><Button onClick={newnft}>ESTIMATE COST NFT</Button></div>
+					</div>
+				  </div>
+				  <div style={style.col}>
+					<div style={style.rightCol}>
+					  <div style={style.inputBoxDiv}><Input id="vanity" style={style.vanityInput} type={"text"} maxLength={2}/></div>
+					  <div style={style.inputBoxDiv}><Input id="nft_meta_title" style={style.titleInput} type={"text"} maxLength={100}/></div>
+					  <div style={style.inputBoxDiv}><Input id="nft_meta_uri" style={style.uriInput} type={"text"} maxLength={255}/></div>
+					  <div style={style.inputBoxDiv}><Switch onChange={getSVGText} /></div>
+					  <div style={style.inputBoxDiv}>
+						<textarea id="nft_meta_data" style={style.dataInput} rows={10}  maxLength={10000}/>
+						<Button style={style.submitButton} onClick={newnft}>GENERATE NEW NFT</Button>
+					  </div>
+					</div>
+				  </div>
+				</div>
+			  </div>
+			  <div style={style.leftPaneBottom}>
+				  <div style={style.textOutput}><p id="status"></p></div>
+				  <div style={style.textOutput}><p id="mint"></p></div>
+				  <div style={style.textOutput}><p id="tacc"></p></div>
+				  <div style={style.textOutput}><p id="mint_meta_author"></p></div>
+				  <div style={style.textOutput}><p id="mint_meta_title"></p></div>
+				  <div style={style.textOutput}><p id="mint_meta_uri"></p></div>
+				  <div style={style.textOutput}><p id="mint_meta_data"></p></div>
+			  </div>
+          </Card>
         </div>
 
         <div style={style.rightPane}>
@@ -668,9 +693,8 @@ export const HomeView = () => {
 			  <source src="./creationEffect.mp4" type="video/mp4"/>
 			</video>
 			Video by Luis Quintero from Pexels
-          <div id='svgDiv' style={style.svgImage}></div>
+			<div id='svgDiv' style={style.svgImage}></div>
         </div>
-
         </div>
   );
 

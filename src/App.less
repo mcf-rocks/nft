@@ -199,3 +199,28 @@ em {
     width: 360px;
   }
 }
+
+.hue {
+	display:block;
+	height:2.5vw;
+	width:auto;
+	background-color: white;
+	animation: pulse 30s infinite;
+	-webkit-animation: pulse 30s infinite;
+}
+
+@keyframes pulse {
+  0%   { background-color: black }
+  25% { background-color: red }  
+  50% { background-color: purple }
+  75% { background-color: darkblue }  
+  100% { background-color: blue }
+}
+
+@-webkit-keyframes pulse {
+  0%   { background-color: black }
+  25% { background-color: red }    
+  50% { background-color: purple } 
+  75% { background-color: darkblue }     
+  100% { background-color: blue }
+}
